@@ -30,8 +30,11 @@
 
   const MANIFEST_NAME = 'manifest.json';
   const SMALL_MAX     = 4 * 1024 * 1024;                 // <=4MB → simple upload
-  const IMAGE_EXT     = ['jpg','jpeg','png','webp','gif','avif'];
-  const VIDEO_EXT     = ['mp4','webm','mov','m4v','ogv'];
+  // Image: web formats + next-gen AVIF. Video: H.264/H.265/AV1 in mp4/webm/mkv,
+  // plus ProRes / RAW masters carried in .mov / .m4v (browser plays what it can
+  // decode; the CDN can transcode the rest). Detection is MIME-first, ext-fallback.
+  const IMAGE_EXT     = ['jpg','jpeg','png','webp','gif','avif','bmp','svg'];
+  const VIDEO_EXT     = ['mp4','webm','mov','m4v','ogv','mkv','avi','m4p','hevc','av1'];
   const FOLDER_MIME   = 'application/vnd.google-apps.folder';
 
   const state = { gallery: [], allprojects: [] };
@@ -322,7 +325,11 @@
 
   // MIME for a <source type>. Prefer the stored mime; else map the extension.
   // Wrong type hints make the browser refuse to decode (e.g. webm bytes as mp4).
-  const VIDEO_MIME = { mp4:'video/mp4', webm:'video/webm', mov:'video/quicktime', m4v:'video/x-m4v', ogv:'video/ogg' };
+  const VIDEO_MIME = {
+    mp4:'video/mp4', webm:'video/webm', mov:'video/quicktime', m4v:'video/x-m4v',
+    ogv:'video/ogg', mkv:'video/x-matroska', avi:'video/x-msvideo',
+    hevc:'video/mp4', av1:'video/mp4'
+  };
   function videoMime(item) {
     if (item.mime && item.mime.indexOf('video/') === 0) return item.mime;
     const ext = (item.name || '').split('.').pop().toLowerCase();

@@ -300,26 +300,19 @@ function attachHoverPlay(video) {
   card._hover = true;
   // Moving the pointer across a card is an aim, not an intent — on a slow link
   // that speculative metadata fetch is bandwidth the visitor never asked for.
-  card.addEventListener('mousemove', () => { if (netPreload() !== 'none') ensureLoaded(video); }, { once: true });
+  card.addEventListener('mousemove', () => { if (window._playbackUnlocked || netPreload() !== 'none') ensureLoaded(video); }, { once: true });
   card.addEventListener('mouseenter', () => {
-    // Hover-to-play is withheld on a slow connection — the play button and the
-    // thumbnail overlay still start it on a real click.
-    if (!isTouch() && netHoverPlay()) {
+    // Hover-to-play plays the video under the mouse. Once the visitor has tapped
+    // the opening popup (_playbackUnlocked) hover always plays — with sound —
+    // regardless of the network gate, so they never have to click a card again.
+    if (!isTouch() && (window._playbackUnlocked || netHoverPlay())) {
       // Always keep track of the most-recently hovered video so that the
       // pointerdown / onFirstInteraction handler knows which video to unmute.
       window._pendingUnmuteVideo = video;
       playVideo(video);
     }
   });
-  card.addEventListener('mouseleave', () => {
-    if (isTouch()) return;
-    // Reels-style: leaving a card must NOT stop it — the autoplay observer keeps
-    // it running, and the observer only re-fires on an intersection change, so a
-    // paused-in-view video would never restart. Just drop the sound instead, so
-    // only the hovered card is audible.
-    video.muted = true;
-    syncMuteBtn(video);
-  });
+  card.addEventListener('mouseleave', () => { if (!isTouch()) stopVideo(video); });
 }
 
 // ── Mobile IntersectionObserver ──
@@ -328,8 +321,9 @@ function setupMobileObs() {
   if (!('IntersectionObserver' in window)) return;
   mobObs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
-      // Autoplay on EVERY device (desktop included), reels-style: a card that is
-      // ~35% on-screen starts playing muted. Desktop hover then only adds sound.
+      // Reels-style autoplay on touch devices only. Desktop uses hover-to-play
+      // (attachHoverPlay) so the video under the mouse is the one that plays.
+      if (!isTouch()) return;
       const video = entry.target;
       const card = video.closest('.proj') || video.closest('.gal-item');
       if (entry.isIntersecting && entry.intersectionRatio >= 0.35) {
@@ -609,12 +603,19 @@ window.loadVidEager = function (v) {
 //     netAutoplay() gate in the observer)
 // After this the visitor never has to tap again — every video that scrolls into
 // view plays with sound on its own.
+// One tap on the opening popup unlocks EVERYTHING for the whole visit:
+//   • sound on   (_soundEnabled)
+//   • playback bypasses the slow-link / Data-Saver gate (_playbackUnlocked), so
+//     the visitor never has to tap/click a second time — on mobile the reels
+//     observer keeps playing, on desktop hover plays each card with sound.
+// On mobile we also kick off whatever is already on-screen right away so the tap
+// plays the visible video without waiting for the next scroll. On desktop nothing
+// auto-starts (hover drives playback), matching the editor's requested behaviour.
 function startInViewVideos() {
+  if (!isTouch()) return;
   const vh = window.innerHeight || document.documentElement.clientHeight;
   document.querySelectorAll('video.gal-video, video.proj-video').forEach(v => {
     const r = v.getBoundingClientRect();
-    // Anything meaningfully on-screen right now — kick it off immediately so the
-    // tap plays the visible video without waiting for the next scroll.
     if (r.bottom > vh * 0.30 && r.top < vh * 0.70) {
       ensureLoaded(v);
       pauseOthers(v);

@@ -143,7 +143,7 @@
             '<span class="ap-count" id="apCount-' + s.key + '">0 / ' + window.LaxtMedia.limit(s.key) + '</span>' +
           '</div>' +
           '<label class="ap-drop" id="apDrop-' + s.key + '">' +
-            '<input type="file" class="ap-file" id="apFile-' + s.key + '" accept=".jpg,.jpeg,.png,.webp,image/*,video/mp4,.mp4" multiple hidden>' +
+            '<input type="file" class="ap-file" id="apFile-' + s.key + '" accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.mp4,.webm,.mov,.m4v,.mkv,.avi" multiple hidden>' +
             '<span class="ap-drop-text">Drop files or <b>click to upload</b><br><small>JPG · PNG · WEBP · MP4</small></span>' +
           '</label>' +
           '<div class="ap-progress" id="apProgress-' + s.key + '" hidden><div class="ap-progress-bar"></div><span class="ap-progress-label"></span></div>' +
@@ -200,11 +200,14 @@
 
   const LaxtMediaLimit = key => (window.LaxtMedia ? window.LaxtMedia.limit(key) : 0);
 
-  const ACCEPT_EXT = ['jpg','jpeg','png','webp','mp4'];
+  // All web + master formats a video editor's portfolio needs: WebP/JPG/PNG/GIF/
+  // AVIF images, and H.264/H.265/AV1/ProRes/RAW video carried in mp4/webm/mov/mkv.
+  const ACCEPT_EXT = ['jpg','jpeg','png','webp','gif','avif','bmp','svg',
+                      'mp4','webm','mov','m4v','ogv','mkv','avi','hevc','av1'];
   const isAccepted = file => {
     const ext = (file.name || '').split('.').pop().toLowerCase();
     return ACCEPT_EXT.indexOf(ext) !== -1 ||
-           (file.type && (file.type.indexOf('image/') === 0 || file.type === 'video/mp4'));
+           (file.type && (file.type.indexOf('image/') === 0 || file.type.indexOf('video/') === 0));
   };
 
   // ── Wire one zone: file picker, drag-and-drop, overflow guard, upload ──
