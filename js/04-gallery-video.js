@@ -336,7 +336,11 @@ function setupMobileObs() {
         // Slow connection / Data Saver: scrolling past a card must not pull a
         // multi-megabyte MP4 down. The poster stays up with its play overlay,
         // and a tap plays it — the same deal every data-saving video app makes.
-        if (!netAutoplay()) { video.pause(); card?.classList.remove('touch-playing'); return; }
+        // Once the visitor has tapped the opening popup (_playbackUnlocked) they've
+        // opted into playback — honour it everywhere and stop gating on the network,
+        // so they never have to tap again. Before that first tap we still respect
+        // Data-Saver / slow links.
+        if (!window._playbackUnlocked && !netAutoplay()) { video.pause(); card?.classList.remove('touch-playing'); return; }
         ensureLoaded(video);
         pauseOthers(video);
         // Instagram-style: the video currently on-screen plays WITH sound once
@@ -599,15 +603,40 @@ window.loadVidEager = function (v) {
 //  video — after that, sound follows whichever video is on-screen
 //  (Instagram style, handled in the mobile IntersectionObserver).
 // ══════════════════════════════════════════════════════════════
+// One tap on the opening popup unlocks EVERYTHING for the whole visit:
+//   • sound on   (_soundEnabled)
+//   • autoplay even on slow links / Data-Saver (_playbackUnlocked bypasses the
+//     netAutoplay() gate in the observer)
+// After this the visitor never has to tap again — every video that scrolls into
+// view plays with sound on its own.
+function startInViewVideos() {
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  document.querySelectorAll('video.gal-video, video.proj-video').forEach(v => {
+    const r = v.getBoundingClientRect();
+    // Anything meaningfully on-screen right now — kick it off immediately so the
+    // tap plays the visible video without waiting for the next scroll.
+    if (r.bottom > vh * 0.30 && r.top < vh * 0.70) {
+      ensureLoaded(v);
+      pauseOthers(v);
+      v.muted = !window._soundEnabled;
+      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+      v.closest('.proj, .gal-item')?.classList.add('touch-playing');
+      syncMuteBtn(v);
+    }
+  });
+}
+
 function enableSoundEverywhere() {
-  window._soundEnabled   = true;
-  window._userInteracted = true;
+  window._soundEnabled    = true;
+  window._userInteracted  = true;
+  window._playbackUnlocked = true;
   document.querySelectorAll('video.gal-video, video.proj-video').forEach(v => {
     if (!v.paused) {
       v.muted = false;
       syncMuteBtn(v);
     }
   });
+  startInViewVideos();
 }
 
 function showSoundPrompt() {
@@ -663,6 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window._userInteracted) return;
     window._userInteracted    = true;
     window._soundEnabled      = true; // any real gesture also enables Instagram-style sound
+    window._playbackUnlocked  = true; // …and unlocks autoplay for the rest of the visit
     window._firstGestureWired = false;
     document.querySelectorAll('video.gal-video, video.proj-video').forEach(v => {
       if (!v.paused) {
@@ -670,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncMuteBtn(v);
       }
     });
+    startInViewVideos();
     // Remove the sound prompt if it's still showing
     const sp = document.getElementById('soundPrompt');
     if (sp) { sp.classList.remove('is-in'); setTimeout(() => sp.remove(), 300); }
