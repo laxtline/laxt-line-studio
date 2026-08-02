@@ -311,7 +311,15 @@ function attachHoverPlay(video) {
       playVideo(video);
     }
   });
-  card.addEventListener('mouseleave', () => { if (!isTouch()) stopVideo(video); });
+  card.addEventListener('mouseleave', () => {
+    if (isTouch()) return;
+    // Reels-style: leaving a card must NOT stop it — the autoplay observer keeps
+    // it running, and the observer only re-fires on an intersection change, so a
+    // paused-in-view video would never restart. Just drop the sound instead, so
+    // only the hovered card is audible.
+    video.muted = true;
+    syncMuteBtn(video);
+  });
 }
 
 // ── Mobile IntersectionObserver ──
@@ -320,7 +328,8 @@ function setupMobileObs() {
   if (!('IntersectionObserver' in window)) return;
   mobObs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
-      if (!isTouch()) return;
+      // Autoplay on EVERY device (desktop included), reels-style: a card that is
+      // ~35% on-screen starts playing muted. Desktop hover then only adds sound.
       const video = entry.target;
       const card = video.closest('.proj') || video.closest('.gal-item');
       if (entry.isIntersecting && entry.intersectionRatio >= 0.35) {
