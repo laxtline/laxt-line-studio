@@ -1,0 +1,763 @@
+/* =====================================================================
+   LAXTLINE — gallery.css
+   ---------------------------------------------------------------------
+   Styles for the project gallery and the fullscreen media viewer.
+   Loaded AFTER main.css so these rules win where they overlap.
+
+   WHAT'S IN HERE:
+     • Gallery header / layout helpers
+     • .gallery-grid + .gal-item  — masonry-style cards (CSS columns)
+     • .gal-media-wrap / .gal-video / .gal-photo — media fill + ratios
+     • Hover overlays, play button, mute button, bottom info bar
+     • Performance: contain, will-change-on-hover, content-visibility
+     • .fsv-* classes              — the fullscreen lightbox viewer
+       (controls: play/pause, seek bar, volume, prev/next, close)
+
+   The card aspect-ratio is set by JS (applyRatio) via padding-bottom,
+   so the grid never shifts once a video/photo reports its size.
+   ===================================================================== */
+
+/* ── GALLERY OVERLAY (removed - now inline section) ── */
+
+/* ══ GALLERY GRID — Masonry-style, 3 columns, items fit their natural ratio ══ */
+.gallery-grid{
+  columns: 3;
+  column-gap: 1rem;
+  padding: 2rem 3rem;
+}
+.gal-item{
+  cursor: pointer;
+  overflow: hidden;
+  break-inside: avoid;
+  margin-bottom: 1rem;
+  display: block;
+  background: #0d0d0d;
+  position: relative;
+  isolation: isolate;
+  content-visibility: auto;
+}
+
+/* ── Media wrap: height driven by natural aspect ratio of media ── */
+.gal-media-wrap{
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  /* padding-bottom set dynamically by JS to exact ratio */
+  padding-bottom: 56.25%; /* fallback 16:9 */
+  min-height: 180px;
+  background: #000;
+}
+
+/* ── Video & Photo: fill the entire card — no black bars ever ── */
+.gal-video, .gal-photo{
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  background: transparent !important;
+  transition: filter .4s ease;
+  filter: grayscale(10%);
+}
+.gal-item:hover .gal-video,
+.gal-item:hover .gal-photo{ filter: grayscale(0%) brightness(1.05); }
+
+/* Ratio badge — shown top-left on all cards */
+.gal-ratio-badge{
+  position: absolute; top: .5rem; left: .5rem; z-index: 6;
+  font-family: 'Space Mono', monospace; font-size: .42rem; letter-spacing: 2px;
+  color: rgba(232,57,42,.9); border: 1px solid rgba(232,57,42,.4);
+  padding: .18rem .5rem; background: rgba(8,8,8,.75); text-transform: uppercase;
+  backdrop-filter: blur(4px); pointer-events: none;
+}
+
+/* ── Responsive ── */
+/* Descending order — later rule wins where ranges overlap. */
+@media(max-width: 1100px){ .gallery-grid{ columns: 2; } }
+/* The grid sits inside a section that already has side padding, so trim its own
+   once space gets tight — otherwise the cards lose ~100px of usable width. */
+@media(max-width: 1024px){ .gallery-grid{ padding: 1.5rem 1rem; column-gap: .8rem; } }
+/* Below ~820px a 2-up card is too narrow for its title/category bar to read */
+@media(max-width: 820px){  .gallery-grid{ columns: 1; } }
+@media(max-width: 640px){  .gallery-grid{ padding: 1rem; } }
+@media(max-width: 380px){  .gallery-grid{ padding: .75rem .5rem; } }
+
+/* Touch-target sizing lives at the END of this file, alongside the pointer
+   cursor rules — .gal-bottom / .gal-mute-btn are defined further down, so a
+   block up here would lose the cascade to them. */
+
+/* Overlay gradient */
+.gal-overlay{
+  position:absolute;inset:0;z-index:1;
+  background:linear-gradient(to top,rgba(8,8,8,.9) 0%,transparent 55%);
+  opacity:0;transition:opacity .35s;
+}
+.gal-item:hover .gal-overlay{opacity:1}
+
+/* Play button centre */
+.gal-play-btn{
+  position:absolute;inset:0;z-index:4;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .3s;
+  pointer-events:auto;
+  cursor:pointer;
+}
+.gal-item:hover .gal-play-btn{opacity:1;pointer-events:auto;}
+.gal-play-btn svg{
+  width:56px;height:56px;
+  background:rgba(232,57,42,.85);border-radius:50%;
+  padding:14px;
+  transition:transform .25s,background .25s;
+  filter:drop-shadow(0 4px 20px rgba(232,57,42,.5));
+}
+.gal-play-btn.playing svg{background:rgba(232,57,42,.7)}
+.gal-play-btn svg:hover{transform:scale(1.1)}
+
+/* Bottom bar */
+.gal-bottom{
+  position:absolute;bottom:0;left:0;right:0;z-index:3;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:1.2rem 1.4rem;
+  opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s;
+}
+.gal-item:hover .gal-bottom{opacity:1;transform:translateY(0)}
+.gal-info{display:flex;flex-direction:column;gap:.2rem}
+.gal-cat{font-family:var(--font-mono);font-size:.52rem;letter-spacing:3px;color:var(--red);text-transform:uppercase}
+.gal-name{font-family:var(--font-display);font-size:1.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--white)}
+
+/* Mute button */
+.gal-mute-btn{
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(232,57,42,.8);border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+  transition:background .2s,transform .2s;
+}
+.gal-mute-btn:hover{background:var(--red);transform:scale(1.12)}
+.gal-mute-btn svg{width:13px;height:13px;pointer-events:none}
+
+/* ── Touch-playing: overlays active when video is touched/playing ── */
+.touch-playing .gal-overlay{opacity:1 !important}
+.touch-playing .gal-bottom{opacity:1 !important;transform:translateY(0) !important}
+.touch-playing .gal-video{filter:grayscale(0%) !important}
+
+/* ═══ PERFORMANCE OPTIMIZATIONS ═══ */
+/* Only use will-change on hover — not always-on (kills GPU memory) */
+.gal-item:hover .gal-video,
+.gal-item:hover .gal-photo { will-change: filter; }
+/* Smooth scrolling without jank */
+.gallery-grid { transform: translateZ(0); }
+/* Contain layout/paint per gallery item — huge perf win for masonry */
+.gal-item { contain: layout style; }
+
+/* Promote animated glows to own GPU layer — avoids main-thread repaints */
+.hero-glow-1, .hero-glow-2, .hero-glow-3 { will-change: transform; }
+/* Hero bg text drift */
+.hero-bg-text { will-change: transform; }
+/* Marquee rows — GPU compositing for smooth scroll */
+.marquee-row { will-change: transform; }
+/* #all-work — content-visibility removed: it blocks IntersectionObserver for .reveal elements */
+/* Layout moved here from inline style="" attributes — inline styles beat media
+   queries, so the section could never shrink its padding on small screens. */
+#all-work{ background:var(--black); padding:6rem 2rem 8rem; position:relative; }
+.allwork-inner{ max-width:1400px; margin:0 auto; }
+.allwork-eyebrow{ display:flex; align-items:center; gap:1rem; margin-bottom:3rem; }
+.allwork-title{
+  font-family:var(--font-display);
+  font-size:clamp(3rem,8vw,7rem);
+  color:var(--white); line-height:.9;
+  margin-bottom:3.5rem; letter-spacing:2px;
+}
+.allwork-title em{ color:var(--red); font-style:normal; }
+@media(max-width:1024px){
+  #all-work{ padding:4.5rem 1.2rem 5rem; }
+  .allwork-title{ margin-bottom:2.2rem; }
+  .allwork-eyebrow{ margin-bottom:2rem; }
+}
+@media(max-width:600px){
+  #all-work{ padding:3.5rem .8rem 4rem; }
+}
+@media(max-width:380px){
+  #all-work{ padding:3rem .5rem 3.5rem; }
+}
+
+/* Force all content inside #all-work fully visible — mirrors the socials-section fix */
+#all-work,
+#all-work > div,
+#all-work > div > *,
+#all-work .gallery-grid,
+#all-work .gal-item,
+#all-work .reveal,
+#all-work .reveal-left {
+  opacity: 1 !important;
+  transform: none !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* Stop unused animations from running off-screen */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+/* Show gal-play-btn as clickable overlay — visible on hover */
+.gal-play-btn { display: flex !important; pointer-events: auto !important; cursor: pointer !important; }
+/* vid-thumb-overlay — defined above */
+/* Hide overlay when video playing */
+.gal-video-playing .vid-thumb-overlay,
+.touch-playing .vid-thumb-overlay { opacity: 0; pointer-events: none; }
+/* Show overlay by default on non-playing items */
+.gal-item:not(.touch-playing):not(.gal-video-playing) .vid-thumb-overlay { opacity: 1; pointer-events: auto; }
+/* Hide on hover so play button shows */
+.gal-item:hover .vid-thumb-overlay { opacity: 0; pointer-events: none; }
+
+/* Ensure VTO is above gal-play-btn in gallery */
+.gal-item .vid-thumb-overlay { z-index: 3; pointer-events: auto; cursor: pointer; }
+/* On hover: hide VTO, show play btn on top */
+.gal-item:hover .vid-thumb-overlay { opacity: 0 !important; pointer-events: none !important; }
+.gal-item:hover .gal-play-btn { opacity: 1 !important; pointer-events: auto !important; z-index: 6 !important; cursor: pointer !important; }
+
+/* ═══ ABSOLUTE MEDIA FILL — FINAL OVERRIDE ═══
+   Ensures every video/img inside any card fills its container completely.
+   No black bars, no gaps, no letterboxing. */
+.proj-media-wrap > video,
+.proj-media-wrap > img,
+.gal-media-wrap > video,
+.gal-media-wrap > img {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important;
+  right: 0 !important; bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  background: transparent !important;
+}
+/* proj card full width in grid */
+.proj { width: 100% !important; min-width: 0; }
+.proj-media-wrap { width: 100% !important; min-width: 0; overflow: hidden !important; }
+.gal-media-wrap { overflow: hidden !important; }
+
+/* ═══ KILL BLACK GAPS — when padding-bottom ratio box has no media ═══
+   The padding-bottom trick creates height, but if video hasn't loaded yet,
+   #000 shows. This makes the fallback invisible until video covers it. */
+.gal-media-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #111;
+  z-index: -1;
+}
+
+/* ═══════════════════════════════════════════════════
+   FULLSCREEN MEDIA VIEWER — WhatsApp-style
+═══════════════════════════════════════════════════ */
+
+/* Expand button on gallery/project cards */
+.fsv-expand-btn {
+  position: absolute;
+  top: .6rem;
+  left: .6rem;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .2s, background .2s, transform .2s;
+  pointer-events: none;
+}
+.fsv-expand-btn svg { width: 14px; height: 14px; display: block; }
+.gal-item:hover .fsv-expand-btn,
+.proj:hover .fsv-expand-btn,
+.touch-playing .fsv-expand-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.fsv-expand-btn:hover {
+  background: rgba(232,57,42,.85);
+  transform: scale(1.12);
+}
+
+/* ── Overlay backdrop ── */
+.fsv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,.96);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+  cursor: default;
+}
+.fsv-overlay.fsv-active {
+  opacity: 1;
+  pointer-events: all;
+}
+.fsv-overlay.fsv-active ~ * { pointer-events: none; }
+
+/* ── Top header bar ── */
+.fsv-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1.4rem;
+  background: linear-gradient(to bottom, rgba(0,0,0,.85) 0%, transparent 100%);
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 2;
+}
+.fsv-meta {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+}
+.fsv-cat {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: 3px;
+  color: var(--red);
+  text-transform: uppercase;
+}
+.fsv-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 2px;
+  color: var(--white);
+  text-transform: uppercase;
+}
+.fsv-header-right {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+}
+.fsv-counter {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,.45);
+}
+.fsv-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  color: var(--white);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.fsv-close-btn:hover {
+  background: rgba(232,57,42,.85);
+  border-color: var(--red);
+  transform: scale(1.08);
+}
+
+/* ── Media area (takes up all space between header & controls) ── */
+.fsv-media-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 70px 64px 90px;
+}
+
+/* ── Nav buttons ── */
+.fsv-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18);
+  color: var(--white);
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+.fsv-nav:hover { background: rgba(232,57,42,.85); border-color: var(--red); transform: translateY(-50%) scale(1.1); }
+.fsv-nav.fsv-hidden { opacity: 0; pointer-events: none; }
+.fsv-prev { left: 12px; }
+.fsv-next { right: 12px; }
+
+/* ── Media wrapper (contains img or video) ── */
+.fsv-media-wrap {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Image display ── */
+.fsv-img {
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: none;
+  border-radius: 2px;
+  box-shadow: 0 20px 80px rgba(0,0,0,.7);
+}
+.fsv-overlay.fsv-type-photo .fsv-img { display: block; }
+.fsv-overlay.fsv-type-photo .fsv-video { display: none; }
+
+/* ── Video display ── */
+.fsv-video {
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  width: auto;
+  height: auto;
+  display: none;
+  border-radius: 2px;
+  box-shadow: 0 20px 80px rgba(0,0,0,.7);
+  background: #000;
+}
+.fsv-overlay.fsv-type-video .fsv-video { display: block; }
+.fsv-overlay.fsv-type-video .fsv-img { display: none; }
+
+/* ── Controls bar (video only) ── */
+.fsv-controls {
+  flex-shrink: 0;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 2;
+  padding: .5rem 1.4rem 1.1rem;
+  background: linear-gradient(to top, rgba(0,0,0,.9) 0%, transparent 100%);
+  display: none;
+  flex-direction: column;
+  gap: .55rem;
+}
+.fsv-overlay.fsv-type-video .fsv-controls { display: flex; }
+
+/* Progress / seek bar */
+.fsv-seek {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,.2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  transition: height .15s;
+}
+.fsv-seek:hover { height: 6px; }
+.fsv-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--red);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(232,57,42,.7);
+}
+.fsv-seek::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--red);
+  border: none;
+  cursor: pointer;
+}
+/* Red fill on the left side of seek bar via CSS custom property */
+.fsv-seek {
+  background: linear-gradient(to right, var(--red) 0%, var(--red) var(--seek-pct, 0%), rgba(255,255,255,.2) var(--seek-pct, 0%), rgba(255,255,255,.2) 100%);
+}
+
+/* Bottom control row */
+.fsv-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+.fsv-ctrl-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(232,57,42,.85);
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .2s, transform .2s;
+  padding: 0;
+}
+.fsv-ctrl-btn:hover { background: var(--red); transform: scale(1.1); }
+.fsv-ctrl-btn svg { width: 14px; height: 14px; fill: white; display: block; pointer-events: none; }
+.fsv-time {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,.75);
+  white-space: nowrap;
+}
+.fsv-spacer { flex: 1; }
+
+/* Quality chip — Auto / High / Data Saver (js/00-net-quality.js).
+   A text pill rather than an icon button: the label has to be readable,
+   because it is also the readout of what the connection is currently
+   getting ("AUTO · BALANCED", "AUTO · 720p", "SAVER"). */
+.fsv-q-btn {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.8);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 20px;
+  padding: .34rem .7rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .2s, border-color .2s, color .2s;
+}
+.fsv-q-btn:hover { background: rgba(232,57,42,.9); border-color: var(--red); color: #fff; }
+/* A manual override is a state worth seeing at a glance — Auto is not. */
+.fsv-q-btn[data-mode="high"]  { border-color: rgba(232,57,42,.7); color: #fff; }
+.fsv-q-btn[data-mode="saver"] { border-color: rgba(255,196,0,.55); color: rgba(255,214,102,.95); }
+.fsv-vol-wrap {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-left: auto;
+}
+.fsv-vol-slider {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,.25);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.fsv-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+.fsv-vol-slider::-moz-range-thumb {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .fsv-media-area { padding: 65px 48px 80px; }
+  .fsv-prev { left: 4px; }
+  .fsv-next { right: 4px; }
+  .fsv-nav { width: 44px; height: 44px; font-size: 1.3rem; }
+  .fsv-vol-slider { width: 60px; }
+  .fsv-name { font-size: .9rem; }
+  .fsv-q-btn { font-size: .5rem; padding: .3rem .55rem; letter-spacing: 1px; }
+  .fsv-ctrl-row { gap: .55rem; }
+}
+
+/* Short landscape (phone turned sideways, Nest Hub): 160px of vertical padding
+   left almost nothing for the media itself on a ~390px-tall viewport. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .fsv-media-area { padding: 48px 56px 56px; }
+  .fsv-nav { width: 40px; height: 40px; }
+}
+
+  /* ═══ ADDITIONAL PERFORMANCE OPTIMIZATIONS ═══ */
+
+  /* GPU layer for nav-cta animated border — isolate repaint */
+  .nav-cta::before { will-change: background-position; }
+
+  /* Contain social buttons — many on page, stops style recalc spread */
+  .social-btn { contain: layout style; }
+  .skill-tag { contain: layout style; }
+  .sw-card { contain: layout style; }
+
+  /* Reduce backdrop-filter cost — only on elements that truly need it */
+  /* tri-frame-label, tri-frame-count, mute-indicator: keep (small area) */
+  /* nav-cta uses mix-blend-mode — let it composite independently */
+
+  /* PERF: Defer Ken Burns to GPU layer only when running */
+  .gal-item:hover .gal-photo { will-change: transform, filter; }
+
+  /* PERF: Promote fullscreen overlay to own layer — avoids painting page behind it */
+  .fsv-overlay { will-change: opacity; }
+
+  /* PERF: Stop expensive text-shadow animations on offscreen marquee items */
+  .marquee-wrap { contain: layout style paint; }
+
+  /* PERF: Reduce animation count — only pulse animations on visible elements */
+  /* Social pulse dots — many on page, reduce repaint by containing them */
+  .social-btn-pulse { will-change: transform, opacity; contain: strict; }
+
+  /* PERF: Gallery grid — isolate from rest of page layout */
+  .gallery-grid { contain: layout; }
+
+
+  /* PERF: Fix expensive box-shadow animations — use opacity change instead */
+  /* workAllPulse and driveBtnPulse animate box-shadow (triggers full composite) */
+  /* Reduce blur radius to lower GPU cost */
+
+  /* PERF: Remove mix-blend-mode from cursor-follower (causes full-page composite) */
+  /* Keep it only on cursor dot */
+  .cursor-follower { mix-blend-mode: normal; border-color: rgba(232,57,42,0.45); }
+
+  /* PERF: Throttle heavy backdrop-filters on mobile */
+  @media(max-width:768px){
+    .gal-ratio-badge { backdrop-filter: none; background: rgba(8,8,8,0.92); }
+    .mute-indicator { backdrop-filter: none; background: rgba(0,0,0,0.75); }
+    .fsv-expand-btn { backdrop-filter: none; background: rgba(0,0,0,0.75); }
+  }
+
+  /* PERF: kenBurns only runs while hovered — gallery section too */
+  .gal-photo { animation-play-state: paused !important; }
+  .gal-item:hover .gal-photo { animation-play-state: running !important; }
+
+  /* PERF: Pause all decorative animations when tab is hidden (via JS class) */
+  .page-hidden .marquee-row,
+  .page-hidden .hero-glow-1, .page-hidden .hero-glow-2, .page-hidden .hero-glow-3,
+  .page-hidden .hero-bg-text { animation-play-state: paused !important; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     MOBILE / TABLET SOUND PROMPT
+     One-time "tap to enable sound" pill shown on touch devices.
+     Injected + removed by js/04-gallery-video.js (#soundPrompt).
+     ═══════════════════════════════════════════════════════════════ */
+  /* Full-screen overlay — blurs the whole page until the user clicks */
+  .sound-prompt{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:1.2rem;
+    opacity:0;
+    pointer-events:none;
+    background:rgba(8,8,8,.55);
+    -webkit-backdrop-filter:blur(16px) saturate(.8);
+    backdrop-filter:blur(16px) saturate(.8);
+    transition:opacity .35s ease;
+    will-change:opacity;
+  }
+  .sound-prompt.is-in{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .sound-prompt-card{
+    display:flex;
+    align-items:center;
+    gap:.9rem;
+    padding:1rem 1.6rem 1rem 1rem;
+    border:1px solid rgba(232,57,42,.55);
+    border-radius:999px;
+    background:rgba(12,12,12,.92);
+    box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 30px rgba(232,57,42,.28);
+    cursor:pointer;
+    font-family:var(--font-body);
+    color:var(--white);
+    max-width:min(90vw,380px);
+    transform:translateY(18px) scale(.96);
+    transition:transform .35s cubic-bezier(.22,.61,.36,1);
+  }
+  .sound-prompt.is-in .sound-prompt-card{
+    transform:translateY(0) scale(1);
+  }
+  .sound-prompt-icon{
+    flex:0 0 auto;
+    width:38px;height:38px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;
+    background:var(--red);
+    box-shadow:0 0 0 0 rgba(232,57,42,.5);
+    animation:soundPromptPulse 1.8s ease-out infinite;
+  }
+  .sound-prompt-icon svg{width:20px;height:20px}
+  @keyframes soundPromptPulse{
+    0%{box-shadow:0 0 0 0 rgba(232,57,42,.5)}
+    70%{box-shadow:0 0 0 12px rgba(232,57,42,0)}
+    100%{box-shadow:0 0 0 0 rgba(232,57,42,0)}
+  }
+  .sound-prompt-text{display:flex;flex-direction:column;line-height:1.2;text-align:left}
+  .sound-prompt-title{
+    font-family:var(--font-display);
+    font-size:1.05rem;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--white);
+  }
+  @media (prefers-reduced-motion:reduce){
+    .sound-prompt{transition:opacity .2s ease}
+    .sound-prompt-icon{animation:none}
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     POINTER CAPABILITY — keyed off the input device, not screen width
+
+     The site hides the native pointer (`cursor:none`) everywhere and draws its
+     own cursor instead. js/01-cursor-init.js only creates that custom cursor on
+     non-touch devices, so wherever it is absent the native pointer MUST come
+     back. This used to be a `max-width:600px` rule, which left every touch
+     laptop and tablet above 600px (Surface Pro 7 at 912px, iPad Pro and Nest
+     Hub at 1024px, Zenbook Fold at 853px) with `cursor:none` AND no custom
+     cursor — i.e. no visible pointer at all when a mouse was attached.
+
+     Must stay LAST in the last-loaded stylesheet: several `cursor:none`
+     declarations appear later in both files and would otherwise win.
+     ═══════════════════════════════════════════════════════════════ */
+  @media (hover:none), (pointer:coarse) {
+    body,
+    .proj, .gal-item,
+    .whatsapp-btn, .work-drive-btn, .social-btn { cursor: auto; }
+    a, button, .proj, .gal-item, .gal-play-btn, .gal-mute-btn,
+    .scroll-more, [onclick], [role="button"] { cursor: pointer; }
+    .cursor, .cursor-follower { display: none !important; }
+
+    /* ── Touch targets ──
+       These controls were 30–34px, under the ~44px minimum, so they were easy
+       to miss — and a miss hits the card's play handler instead. */
+    .gal-mute-btn{ width:44px; height:44px; }
+    .gal-mute-btn svg{ width:16px; height:16px; }
+    .gal-play-btn svg{ width:64px; height:64px; padding:16px; }
+    .vid-btn{ width:44px; height:44px; }
+    .vid-btn svg{ width:15px; height:15px; }
+    .social-link{ width:44px; height:44px; }
+
+    /* ── Hover-only UI has no hover on touch ──
+       The card's category + title bar and its legibility gradient were both
+       opacity:0 until :hover, so on a phone the project titles never appeared
+       at all. Show them permanently instead. */
+    .gal-bottom{ opacity:1; transform:none; }
+    .gal-overlay{ opacity:.6; }
+    .vid-thumb-overlay{ opacity:1; }
+  }

@@ -1,0 +1,22 @@
+{
+  "name": "LAXTLINE — Visual Storyteller & Video Editor",
+  "short_name": "LAXTLINE",
+  "description": "Cinematic video edits, VFX, color grading, gaming montages, photo edits and design by LAXTLINE.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "categories": ["portfolio", "video", "photography", "design"],
+  "icons": [
+    {
+      "src": "assets/logo.jpeg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

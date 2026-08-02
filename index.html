@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+
+<!-- =====================================================================
+     LAXTLINE — Portfolio Website  (single-page, static)
+     ---------------------------------------------------------------------
+     Stack    : HTML5 + CSS3 + Vanilla JavaScript (zero frameworks)
+     Entry    : index.html  →  css/main.css, css/gallery.css
+                              →  js/01-cursor-init.js .. js/04-gallery-video.js
+     Sections : Hero · Marquee · Work · About · Services · Software ·
+                Contact · Socials · All-Work gallery · Fullscreen viewer
+     Media    : gallery media is fetched at runtime from the owner's CDN
+                (see window.LAXT_CDN below); static art lives in assets/
+     NOTE     : Real social handles & email are kept as-is on purpose —
+                changing them would break the live account links.
+     ===================================================================== -->
+
+<!-- ===== SEO / Primary meta (invisible to users, read by search engines) ===== -->
+<meta name="description" content="LAXTLINE — visual storyteller & video editor. Cinematic edits, VFX, color grading, gaming montages, photo edits and design. Based in Bhubaneswar, Odisha, India.">
+<meta name="keywords" content="LAXTLINE, video editor, visual storyteller, VFX, color grading, cinematic edit, gaming montage, reel editing, motion graphics, photo editing, Bhubaneswar, Odisha, India">
+<meta name="author" content="LAXTLINE Studio — Suryakant Pradhan">
+<meta name="robots" content="index, follow">
+<!-- Canonical + social URLs use a placeholder domain — replace with your real domain when hosted -->
+<link rel="canonical" href="https://laxt-line-studio.vercel.app/">
+
+<!-- ===== Open Graph — controls link previews on WhatsApp / Facebook / LinkedIn ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LAXTLINE">
+<meta property="og:title" content="LAXTLINE — Visual Storyteller & Video Editor">
+<meta property="og:description" content="Cinematic video edits, VFX, color grading & design by LAXTLINE.">
+<meta property="og:image" content="https://laxt-line-studio.vercel.app/assets/logo.jpeg">
+<meta property="og:url" content="https://laxt-line-studio.vercel.app/">
+
+<!-- ===== Twitter / X card — link preview on X ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LAXTLINE — Visual Storyteller & Video Editor">
+<meta name="twitter:description" content="Cinematic video edits, VFX, color grading & design by LAXTLINE.">
+<meta name="twitter:image" content="https://laxt-line-studio.vercel.app/assets/logo.jpeg">
+
+<title>LAXTLINE — Visual Storyteller & Video Editor</title>
+
+<!-- ===== Favicon (browser tab icon), Apple touch icon & PWA manifest =====
+     Served from assets/. It previously lived in a folder whose name contained a
+     double space and an "&" ("Logo  & Background/"), which has to be percent-
+     encoded differently in HTML attributes, in JSON, and in absolute og: URLs —
+     an easy thing to get wrong on a case-sensitive Linux host. ===== -->
+<link rel="icon" type="image/jpeg" href="assets/logo.jpeg">
+<link rel="apple-touch-icon" href="assets/logo.jpeg">
+<link rel="manifest" href="site.webmanifest">
+
+<!-- Preconnect for faster font loading -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="dns-prefetch" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- Every gallery image and video is fetched from this origin. Opening the
+     TCP + TLS connection now (rather than when the first card requests media)
+     removes a full DNS→TCP→TLS round-trip from the critical path — typically
+     100-300ms on mobile networks. -->
+<link rel="preconnect" href="https://cloud-server-eight.vercel.app" crossorigin>
+<link rel="dns-prefetch" href="https://cloud-server-eight.vercel.app">
+
+<!-- The hero photo is the Largest Contentful Paint element. Without this it is
+     not discovered until CSS has parsed; preloading starts it immediately. -->
+<link rel="preload" as="image" href="assets/hero-photo.webp" fetchpriority="high">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/gallery.css">
+<link rel="stylesheet" href="css/admin.css">
+
+<!-- ===== MEDIA CDN CONFIG =====================================================
+     Dynamic media backend. Media files live in the owner's own Google-Drive CDN
+     (cloud-server-eight.vercel.app). Public display uses key-less
+     /api/media/<id> and /api/share/<folderId> endpoints. Upload/delete are
+     gated behind the hidden admin login (top-right icon) and only run after a
+     successful login.
+
+     IMPORTANT — `base` must match the CDN's CURRENT Vercel deployment URL.
+     Redeploying that project under a new name changes this hostname, and the
+     old one starts returning 404 DEPLOYMENT_NOT_FOUND. When that happens the
+     whole gallery silently goes empty and uploads fail, because every media
+     call resolves against a host that no longer exists. If media stops
+     loading, check this URL FIRST — the folder IDs and API key below are
+     rarely the cause.
+
+     The two folder IDs must stay in sync with the sub-folders inside the
+     CDN's DRIVE_FOLDER_ID root (named laxtline_gallery / laxtline_allprojects).
+     ========================================================================== -->
+<script id="media-cdn-config">
+window.LAXT_CDN = {
+  base:    'https://cloud-server-eight.vercel.app',
+  key:     'dmc_c2f5ed7b1bf118404ec05c66e4aa936f77c05afbc1c2c5653c5cb77c41c50260',
+  folders: {
+    gallery:     '1ZIP4YA70RIw_angt0PsjUmUoULTBoUPe',   // Project Gallery  (max 15)
+    allprojects: '1CyZ2XtGjuaYG3eotTI8zGrtRmyANW6H1'    // All Projects     (max 100)
+  },
+  limits:  { gallery: 15, allprojects: 100 },
+  storeKeys: { gallery: 'laxtline_gallery', allprojects: 'laxtline_allprojects' },
+  // ── Video quality renditions (optional) ──────────────────────────────
+  // Once your CDN can serve lower-resolution MP4s, fill these in and the
+  // auto-quality engine (js/00-net-quality.js) will start switching
+  // mid-playback based on the visitor's connection.
+  //
+  // qualityParam : the query-string key your CDN expects, e.g. 'q' → ?q=360
+  // ladder       : maps each tier to the target height in pixels
+  //                (0 = serve the original file for that tier)
+  //
+  // Example — uncomment when ready:
+  // video: {
+  //   qualityParam: 'q',
+  //   ladder: { slow: 360, medium: 720, fast: 0 }
+  // }
+};
+</script>
+
+<!-- ===== SECTION ENTRANCE FX (self-contained, GPU-only, reduced-motion safe) ===== -->
+<style id="fx-section-anim">
+  .fx-label{opacity:0;transform:translateX(-22px);transition:opacity .7s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1);will-change:opacity,transform}
+  .fx-label::before{transform:scaleX(0);transform-origin:left center;transition:transform .7s cubic-bezier(.22,.61,.36,1) .12s}
+  .fx-label.fx-in{opacity:1;transform:translateX(0)}
+  .fx-label.fx-in::before{transform:scaleX(1)}
+  .fx-title{opacity:0;transform:translateY(34px);filter:blur(6px);transition:opacity .8s cubic-bezier(.22,.61,.36,1) .12s,transform .8s cubic-bezier(.22,.61,.36,1) .12s,filter .8s ease .12s;will-change:opacity,transform,filter}
+  .fx-title.fx-in{opacity:1;transform:translateY(0);filter:blur(0)}
+  .fx-title em{transition:text-shadow .9s ease .35s}
+  .fx-title.fx-in em{text-shadow:0 0 22px rgba(232,57,42,.45)}
+  .fx-logo-init{opacity:0;transform:translateY(-12px)}
+  .fx-logo-in{opacity:1;transform:translateY(0);transition:opacity .8s ease,transform .8s cubic-bezier(.22,.61,.36,1)}
+  /* ── Per-section entrance for content (re-plays every time the section enters view) ── */
+  .fxe{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1);will-change:opacity,transform}
+  .fxe-in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    .fx-label,.fx-label::before,.fx-title,.fx-logo-init{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
+    .fxe{opacity:1!important;transform:none!important;transition:none!important}
+  }
+</style>
+<script id="fx-section-anim-js">
+(function(){
+  function init(){
+    var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    // Logo entrance on load
+    var logo = document.querySelector('.nav-logo');
+    if(logo && !prefersReduced){
+      logo.classList.add('fx-logo-init');
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ logo.classList.add('fx-logo-in'); }); });
+      setTimeout(function(){ logo.classList.add('fx-logo-in'); }, 1200);
+    }
+    var heads = document.querySelectorAll('.section-label,.section-title');
+    if(!heads.length) return;
+    if(prefersReduced){ return; } // CSS leaves them fully visible
+    heads.forEach(function(el){ el.classList.add(el.classList.contains('section-label')?'fx-label':'fx-title'); });
+    if(!('IntersectionObserver' in window)){
+      heads.forEach(function(el){ el.classList.add('fx-in'); });
+      return;
+    }
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('fx-in'); obs.unobserve(e.target); } });
+    },{threshold:.15,rootMargin:'0px 0px -60px 0px'});
+    heads.forEach(function(el){ obs.observe(el); });
+    // Safety: force-show anything still hidden after 2.5s
+    setTimeout(function(){
+      document.querySelectorAll('.fx-label:not(.fx-in),.fx-title:not(.fx-in)').forEach(function(el){ el.classList.add('fx-in'); });
+    }, 2500);
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init); }
+  else { init(); }
+})();
+</script>
+
+<!-- ===== PER-SECTION CONTENT ENTRANCE (replays on every scroll-in) ===== -->
+<script id="fxe-section-anim-js">
+(function(){
+  function init(){
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    // Sections to animate — everything EXCEPT the project gallery (#work) and all projects (#all-work)
+    var SECTIONS = ['#home','#about','#services','#software','#contact','#socials'];
+    var groups = [];
+    SECTIONS.forEach(function(sel){
+      var sec = document.querySelector(sel);
+      if(!sec) return;
+      // Pick the content elements inside this section to animate (skip the section-title/label that the fx- system already handles)
+      var sel2 = '.hero-tag,.hero-title,.hero-sub,.hero-meta,.about-bio,.about-skills,.about-img-wrap,.about-years,.service-item,.sw-category,.contact-info-item,.contact-socials,.whatsapp-btn,.social-btn,.socials-header p,.about-dp-wrap,p';
+      var els = Array.prototype.slice.call(sec.querySelectorAll(sel2));
+      // De-duplicate (a node matched by two selectors) and keep order
+      els = els.filter(function(el,i){ return els.indexOf(el)===i; });
+      if(!els.length) return;
+      els.forEach(function(el){ el.classList.add('fxe'); });
+      groups.push({sec:sec, els:els});
+    });
+    if(!groups.length) return;
+
+    function play(g){
+      g.els.forEach(function(el,i){
+        el.style.transitionDelay = Math.min(i*0.06, 0.5)+'s';
+        el.classList.add('fxe-in');
+      });
+    }
+    function reset(g){
+      g.els.forEach(function(el){
+        el.style.transitionDelay = '';
+        el.classList.remove('fxe-in');
+      });
+    }
+
+    if(!('IntersectionObserver' in window)){
+      groups.forEach(function(g){ g.els.forEach(function(el){ el.classList.add('fxe-in'); }); });
+      return;
+    }
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        var g = groups.filter(function(x){ return x.sec===e.target; })[0];
+        if(!g) return;
+        if(e.isIntersecting){ play(g); }
+        else { reset(g); } // reset when fully out of view so it replays on next entry
+      });
+    },{threshold:.12});
+    groups.forEach(function(g){ obs.observe(g.sec); });
+
+    // Safety: force-show after 3s anything stuck hidden while in viewport
+    setTimeout(function(){
+      groups.forEach(function(g){
+        var r = g.sec.getBoundingClientRect();
+        if(r.top < window.innerHeight && r.bottom > 0){ play(g); }
+      });
+    }, 3000);
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init); }
+  else { init(); }
+})();
+</script>
+</head>
+<body>
+
+<!-- CUSTOM CURSOR -->
+<script src="js/01-cursor-init.js"></script>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+      <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+      <line x1="7" y1="2" x2="7" y2="22"/>
+      <line x1="17" y1="2" x2="17" y2="22"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <line x1="2" y1="7" x2="7" y2="7"/>
+      <line x1="2" y1="17" x2="7" y2="17"/>
+      <line x1="17" y1="7" x2="22" y2="7"/>
+      <line x1="17" y1="17" x2="22" y2="17"/>
+    </svg>
+    <span class="nav-logo-text">LAXT<span class="logo-accent">LINE</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#work">Work</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#socials">Socials</a></li>
+  </ul>
+  <a href="https://wa.me/917848003467" target="_blank" rel="noopener noreferrer" class="nav-cta"><span class="hire-dot"></span><span class="hire-text">Hire Me</span></a>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBILE NAV OVERLAY -->
+<div class="mobile-nav" id="mobileNav">
+  <a href="#work" onclick="closeMobileNav()">Work</a>
+  <a href="#about" onclick="closeMobileNav()">About</a>
+  <a href="#services" onclick="closeMobileNav()">Services</a>
+  <a href="#contact" onclick="closeMobileNav()">Contact</a>
+  <a href="#socials" onclick="closeMobileNav()">Socials</a>
+  <a href="https://wa.me/917848003467" target="_blank" rel="noopener noreferrer" class="nav-cta-mob"><span class="mob-hire-dot"></span><span class="mob-hire-text">Hire Me</span></a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-bg">
+    <!-- Animated Canvas Background -->
+    <canvas id="heroBg" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true"></canvas>
+    <!-- Hero Background Photo -->
+    <!-- fetchpriority mirrors the <link rel="preload"> in <head> so the browser
+         doesn't demote this to a low-priority image request. -->
+    <img decoding="async" fetchpriority="high" class="hero-photo" src="assets/hero-photo.webp" alt="Video Editor at Work">
+
+    <!-- Deep red glow blobs -->
+    <div class="hero-glow hero-glow-1"></div>
+    <div class="hero-glow hero-glow-2"></div>
+    <div class="hero-glow hero-glow-3"></div>
+
+    <!-- Diagonal scan lines -->
+    <div class="hero-scanlines"></div>
+
+    <!-- Cinematic letterbox bars -->
+    <div class="hero-bar-top"></div>
+    <div class="hero-bar-bottom"></div>
+
+    <!-- Background huge text -->
+    <div class="hero-bg-text">LAXTLINE</div>
+
+    <!-- Film frame corners -->
+    <div class="frame-corner fc-tl"></div>
+    <div class="frame-corner fc-tr"></div>
+    <div class="frame-corner fc-bl"></div>
+    <div class="frame-corner fc-br"></div>
+  </div>
+  <div class="hero-noise"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-tag">Available for Freelance &mdash; 2025</div>
+    <h1 class="hero-title">
+      FRAME<br>
+      <span>YOUR</span>
+      STORY
+    </h1>
+    <p class="hero-sub">Award-winning video editor & cinematographer crafting cinematic narratives for brands, films, and campaigns that demand to be felt.</p>
+    <div class="hero-meta">
+      <div class="hero-scroll">
+        <span class="hero-scroll-line"></span>
+        Scroll to explore
+      </div>
+      <div class="hero-stats">
+        <div>
+          <span class="hero-stat-num">120+</span>
+          <span class="hero-stat-label">Projects</span>
+        </div>
+        <div>
+          <span class="hero-stat-num">5+</span>
+          <span class="hero-stat-label">Years Exp</span>
+        </div>
+        <div>
+          <span class="hero-stat-num">40+</span>
+          <span class="hero-stat-label">Clients</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-glow-bg"></div>
+  <div class="marquee-fade-l"></div>
+  <div class="marquee-fade-r"></div>
+
+  <!-- ROW 1: Left moving -->
+  <div class="marquee-row marquee-row-1">
+    <div class="marquee-item">VIDEO EDITING <span class="marquee-dot"></span></div>
+    <div class="marquee-item hl">COLOR GRADING <span class="marquee-dot"></span></div>
+    <div class="marquee-item">CINEMATOGRAPHY <span class="marquee-dot"></span></div>
+    <div class="marquee-item">MOTION GRAPHICS <span class="marquee-dot"></span></div>
+    <div class="marquee-item hl">DOCUMENTARY <span class="marquee-dot"></span></div>
+    <div class="marquee-item">BRAND FILMS <span class="marquee-dot"></span></div>
+    <div class="marquee-item">MUSIC VIDEOS <span class="marquee-dot"></span></div>
+    <div class="marquee-item hl">COMMERCIAL ADS <span class="marquee-dot"></span></div>
+    <!-- duplicate for seamless loop -->
+    <div class="marquee-item">VIDEO EDITING <span class="marquee-dot"></span></div>
+    <div class="marquee-item hl">COLOR GRADING <span class="marquee-dot"></span></div>
+    <div class="marquee-item">CINEMATOGRAPHY <span class="marquee-dot"></span></div>
+    <div class="marquee-item">MOTION GRAPHICS <span class="marquee-dot"></span></div>
+    <div class="marquee-item hl">DOCUMENTARY <span class="marquee-dot"></span></div>
+    <div class="marquee-item">BRAND FILMS <span class="marquee-dot"></span></div>
+    <div class="marquee-item">MUSIC VIDEOS <span class="marquee-dot"></span></div>
+    <div class="marquee-item hl">COMMERCIAL ADS <span class="marquee-dot"></span></div>
+  </div>
+
+  <!-- subtle divider -->
+  <div class="marquee-divider"></div>
+
+  <!-- ROW 2: Right moving (reverse) -->
+  <div class="marquee-row marquee-row-2">
+    <div class="marquee-item hl">AFTER EFFECTS <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">PREMIERE PRO <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">DAVINCI RESOLVE <span class="marquee-diamond"></span></div>
+    <div class="marquee-item hl">VFX & COMPOSITING <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">SOUND DESIGN <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">REEL EDITING <span class="marquee-diamond"></span></div>
+    <div class="marquee-item hl">COLOR SCIENCE <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">VISUAL STORYTELLING <span class="marquee-diamond"></span></div>
+    <!-- duplicate -->
+    <div class="marquee-item hl">AFTER EFFECTS <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">PREMIERE PRO <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">DAVINCI RESOLVE <span class="marquee-diamond"></span></div>
+    <div class="marquee-item hl">VFX & COMPOSITING <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">SOUND DESIGN <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">REEL EDITING <span class="marquee-diamond"></span></div>
+    <div class="marquee-item hl">COLOR SCIENCE <span class="marquee-diamond"></span></div>
+    <div class="marquee-item">VISUAL STORYTELLING <span class="marquee-diamond"></span></div>
+  </div>
+</div>
+
+<!-- WORK -->
+<section class="work" id="work">
+  <div class="work-header reveal">
+    <div>
+      <div class="section-label">My Work</div>
+      <h2 class="section-title">PROJECT <em>GALLERY</em></h2>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+      <a href="#all-work" class="work-all" id="viewAllBtn"><span>View All Work</span></a>
+      <a href="https://drive.google.com/drive/folders/1xaQf4mh_WHaPL5rWU0cE3SF1jF-rqdZw?usp=drive_link" target="_blank" rel="noopener noreferrer" class="work-drive-btn">
+        <span class="drive-icon-wrap">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.28 15.988L4.18 19.538l-.002.003a.75.75 0 00.65 1.125H19.17a.75.75 0 00.65-1.125l-.002-.003-2.1-3.55H6.28z" fill="#4285F4"/>
+            <path d="M4.178 19.541L9.97 9.577H6.757L.965 19.541h3.213z" fill="#34A853"/>
+            <path d="M14.03 9.577l-4.06 6.998 2.1 3.55h6.759l-4.8-10.548z" fill="#FBBC04"/>
+            <path d="M12 4.336L9.97 7.778l2.03 3.464L14.03 7.778 12 4.336z" fill="#EA4335"/>
+            <path d="M9.97 9.577L6.757 15.988H17.24L14.03 9.577H9.97z" fill="#4285F4" opacity=".15"/>
+          </svg>
+        </span>
+        <span class="drive-label">Project Drive</span>
+        <span class="drive-arrow">→</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       PROJECT GALLERY GRID
+       Every card below follows the SAME pattern (this note explains all of them):
+
+       <div class="gal-item"            ← one gallery card (masonry column item)
+            data-type="video|photo"     ← media kind shown in the card
+            data-fs-type="video|photo"  ← media kind opened in the fullscreen viewer
+            data-fs-src="path/to/file"  ← file used by the fullscreen viewer
+            data-fs-cat="Category"      ← label shown in the viewer
+            data-fs-name="Title">       ← title shown in the viewer
+         <div class="gal-media-wrap">   ← ratio box; JS sets its height to the media
+           <video class="gal-video" ... preload="metadata">
+             <source data-src="..."> ← data-src (not src) = lazy load; JS swaps it in
+           <div class="gal-overlay">      ← dark gradient on hover
+           <div class="vid-thumb-overlay">← play icon shown on the thumbnail
+           <div class="gal-play-btn">     ← click target → galTogglePlay()
+           <div class="gal-bottom">       ← category + title + mute button (on hover)
+
+       Photos use <img class="gal-photo" loading="lazy"> instead of <video>.
+       Add a new card by copying one block and changing the data-* + file path.
+       ==================================================================== -->
+  <!-- Populated dynamically by js/05-media-engine.js from CDN folder "laxtline_gallery".
+       Admin uploads/deletes/reorders via the hidden panel; site re-renders on change. -->
+  <div class="gallery-grid" id="projectGalleryGrid" data-media-section="gallery"></div>
+  <div class="media-empty" id="galleryEmpty" hidden>No gallery media yet.</div>
+
+    <!-- SCROLL MORE INDICATOR -->
+  <div class="scroll-more reveal" onclick="document.getElementById('all-work').scrollIntoView({behavior:'smooth'})">
+
+    <!-- Divider rule with badge -->
+    <div class="sm-rule">
+      <div class="sm-rule-line"></div>
+      <div class="sm-rule-badge">↓ &nbsp; Scroll For More &nbsp; ↓</div>
+      <div class="sm-rule-line r"></div>
+    </div>
+
+    <!-- Bold display text -->
+    <div class="sm-big-label">See More <em>Projects</em></div>
+
+    <!-- Large SVG arrows — 3 stacked chevrons, clearly visible -->
+    <div class="sm-arrows">
+      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Chevron 1 — top, brightest -->
+        <polyline class="sm-chev-1" points="10,6 40,26 70,6" stroke="#E8392A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Chevron 2 — middle -->
+        <polyline class="sm-chev-2" points="10,24 40,44 70,24" stroke="#E8392A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Chevron 3 — bottom, faintest -->
+        <polyline class="sm-chev-3" points="10,42 40,62 70,42" stroke="#E8392A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- Subtle hint -->
+    <div class="sm-hint">
+      <div class="sm-hint-line"></div>
+      swipe down
+      <div class="sm-hint-line"></div>
+    </div>
+
+  </div>
+
+</section>
+<section class="about" id="about">
+  <div class="reveal-left">
+    <div class="about-img-wrap">
+      <div class="about-img-placeholder">
+        <img decoding="async" loading="lazy" class="about-bg-img" src="assets/about-bg.jpg" alt="Studio Background">
+        <div class="about-bg-overlay"></div>
+        <div class="about-dp-wrap">
+          <img decoding="async" class="about-dp" src="assets/about-dp.jpg" alt="Surya">
+        </div>
+        <div class="about-frame"></div>
+      </div>
+      <div class="about-years">
+        <span class="about-years-num">5+</span>
+        <span class="about-years-label">Years of Vision</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal">
+    <div class="section-label">About Me</div>
+    <h2 class="section-title">THE ARTIST<br>BEHIND THE <em>LENS</em></h2>
+    <p class="about-bio">
+      I'm <strong>Surya</strong> — a cinematic video editor and cinematographer from <em>Bhubaneswar, Odisha</em>, with over <strong>5 years of experience</strong> crafting stories that evoke emotion, challenge perspective, and move audiences.
+    </p>
+    <p class="about-bio" style="margin-top:-.5rem">
+      My work spans <em>music videos, brand campaigns, short films, and documentaries</em> — always rooted in intentional storytelling and cinematic visual language. From raw emotion to refined aesthetics, I focus on creating films that feel <strong>immersive, authentic, and emotionally driven.</strong>
+    </p>
+    <p class="about-bio" style="margin-top:-.5rem">
+      Now based in <em>Bhubaneswar, Odisha</em> and working with clients globally — I approach every project with the belief that <strong>every frame is a decision, and every cut, a heartbeat.</strong>
+    </p>
+    <div class="about-skills">
+      <span class="skill-tag">Adobe Premiere Pro</span>
+      <span class="skill-tag">DaVinci Resolve</span>
+      <span class="skill-tag">After Effects</span>
+      <span class="skill-tag">Final Cut Pro</span>
+      <span class="skill-tag">Cinema 4D</span>
+      <span class="skill-tag">Color Grading</span>
+      <span class="skill-tag">Sound Design</span>
+      <span class="skill-tag">VFX / Compositing</span>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="services" id="services">
+  <img class="services-bg" loading="lazy" decoding="async" src="assets/services-bg.avif" alt="">
+  <div class="services-overlay"></div>
+  <div class="reveal" style="text-align:center;max-width:600px;margin:0 auto 0">
+    <div class="section-label" style="justify-content:center">What I Do</div>
+    <h2 class="section-title">MY <em>SERVICES</em></h2>
+  </div>
+
+  <div class="services-grid reveal">
+    <div class="service-item">
+      <span class="service-num">01</span>
+      <span class="service-icon">🎬</span>
+      <div class="service-name">Video Editing</div>
+      <p class="service-desc">Precision cutting, pacing, and narrative flow. From raw footage to cinematic masterpiece — I sculpt stories that hold attention from first frame to last.</p>
+      <div class="service-tags">
+        <span class="service-tag">Premiere Pro</span>
+        <span class="service-tag">Final Cut</span>
+        <span class="service-tag">Resolve</span>
+      </div>
+    </div>
+    <div class="service-item">
+      <span class="service-num">02</span>
+      <span class="service-icon">🎨</span>
+      <div class="service-name">Color Grading</div>
+      <p class="service-desc">Mood through color. I develop signature LUTs and grade your footage to create a distinct, emotive visual identity that becomes instantly recognizable.</p>
+      <div class="service-tags">
+        <span class="service-tag">DaVinci Resolve</span>
+        <span class="service-tag">LUT Design</span>
+      </div>
+    </div>
+    <div class="service-item">
+      <span class="service-num">03</span>
+      <span class="service-icon">📽️</span>
+      <div class="service-name">Cinematography</div>
+      <p class="service-desc">On-set direction and camera work. I capture footage with editorial intent — knowing exactly how every shot will cut together before we even hit record.</p>
+      <div class="service-tags">
+        <span class="service-tag">Camera Op</span>
+        <span class="service-tag">Lighting</span>
+        <span class="service-tag">Direction</span>
+      </div>
+    </div>
+    <div class="service-item">
+      <span class="service-num">04</span>
+      <span class="service-icon">✨</span>
+      <div class="service-name">Motion Graphics</div>
+      <p class="service-desc">Titles, transitions, and visual effects that feel native to the footage — never bolted on. Motion design that serves the story, not the other way around.</p>
+      <div class="service-tags">
+        <span class="service-tag">After Effects</span>
+        <span class="service-tag">Cinema 4D</span>
+        <span class="service-tag">VFX</span>
+      </div>
+    </div>
+    <div class="service-item wide">
+      <span class="service-num">05</span>
+      <span class="service-icon">📸</span>
+      <div class="service-name">Photography</div>
+      <p class="service-desc">Still frames that speak volumes. From editorial portraits and product shoots to event coverage and cinematic stills — I bring the same obsessive attention to composition, lighting, and mood to every photograph. Each image is a story frozen in time, crafted to complement and elevate your visual brand.</p>
+      <div class="service-tags">
+        <span class="service-tag">Portrait</span>
+        <span class="service-tag">Editorial</span>
+        <span class="service-tag">Product Shoot</span>
+        <span class="service-tag">Event Coverage</span>
+        <span class="service-tag">Lightroom</span>
+        <span class="service-tag">Photoshop</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOFTWARE & TOOLS -->
+<section class="software" id="software">
+  <img class="software-bg" loading="lazy" decoding="async" src="assets/software-bg.jpg" alt="">
+  <div class="software-overlay"></div>
+  <div class="reveal" style="text-align:center;max-width:600px;margin:0 auto 4rem">
+    <div class="section-label" style="justify-content:center">Arsenal</div>
+    <h2 class="section-title">SOFTWARE &amp; <em>TOOLS</em></h2>
+  </div>
+
+  <div class="software-categories reveal">
+
+    <!-- 3D & Design -->
+    <div class="sw-category">
+      <div class="sw-cat-label">3D &amp; Design</div>
+      <div class="sw-items">
+        <div class="sw-card">
+          <span class="sw-icon">📐</span>
+          <span class="sw-name">SketchUp</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🎥</span>
+          <span class="sw-name">Cinema 4D</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🫐</span>
+          <span class="sw-name">Blender</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adobe Suite -->
+    <div class="sw-category">
+      <div class="sw-cat-label">Adobe Suite</div>
+      <div class="sw-items">
+        <div class="sw-card sw-highlight">
+          <span class="sw-icon">🎬</span>
+          <span class="sw-name">Premiere Pro</span>
+        </div>
+        <div class="sw-card sw-highlight">
+          <span class="sw-icon">✨</span>
+          <span class="sw-name">After Effects</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🖼️</span>
+          <span class="sw-name">Photoshop</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🌅</span>
+          <span class="sw-name">Lightroom</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🎧</span>
+          <span class="sw-name">Audition</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video & Color -->
+    <div class="sw-category">
+      <div class="sw-cat-label">Video &amp; Color</div>
+      <div class="sw-items">
+        <div class="sw-card sw-highlight">
+          <span class="sw-icon">🎨</span>
+          <span class="sw-name">DaVinci Resolve</span>
+        </div>
+        <div class="sw-card sw-highlight">
+          <span class="sw-icon">🍎</span>
+          <span class="sw-name">Final Cut Pro</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">📱</span>
+          <span class="sw-name">CapCut</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI & Upscaling -->
+    <div class="sw-category">
+      <div class="sw-cat-label">AI &amp; Upscaling</div>
+      <div class="sw-items">
+        <div class="sw-card">
+          <span class="sw-icon">🤖</span>
+          <span class="sw-name">Topaz Video AI</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🔬</span>
+          <span class="sw-name">Topaz Photo AI</span>
+        </div>
+        <div class="sw-card">
+          <span class="sw-icon">🎨</span>
+          <span class="sw-name">Canva</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- CONTACT -->
+<section class="contact" id="contact">
+  <div class="reveal">
+    <div class="section-label">Get In Touch</div>
+    <h2 class="section-title">GOT A VISION?<br>LET'S <em>BUILD IT</em></h2>
+    <p style="color:rgba(245,242,238,.8);font-size:.9rem;line-height:1.8;margin-top:1.5rem;max-width:380px">Have a project in mind? I'd love to hear about it. Send a message and I'll get back to you within 24 hours.</p>
+    <div style="margin-top:2.5rem">
+      <div class="contact-info-item">
+        <span class="contact-info-label">Email</span>
+        <span class="contact-info-value">suryakant321pradhan@gmail.com</span>
+      </div>
+      <div class="contact-info-item">
+        <span class="contact-info-label">Phone</span>
+        <span class="contact-info-value">+91 78480 03467</span>
+      </div>
+      <div class="contact-info-item">
+        <span class="contact-info-label">From</span>
+        <span class="contact-info-value">Bhubaneswar, Odisha, India</span>
+      </div>
+      <div class="contact-info-item">
+        <span class="contact-info-label">Availability</span>
+        <span class="contact-info-value" style="color:var(--red)">● Open for Projects</span>
+      </div>
+    </div>
+    <div class="contact-socials">
+      <a href="https://www.linkedin.com/in/suryakanta-pradhan-b4179b27a/" target="_blank" rel="noopener noreferrer" class="social-link">in</a>
+    </div>
+  </div>
+
+  <div class="reveal" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start">
+    <div class="section-label" style="margin-bottom:1.2rem">Message Me Directly</div>
+    <p style="color:var(--muted);font-size:.9rem;line-height:1.8;margin-bottom:2.5rem;max-width:360px">Ready to bring your vision to life? Hit me up on WhatsApp — fastest way to reach me.</p>
+    <a href="https://wa.me/917848003467" target="_blank" rel="noopener noreferrer" class="whatsapp-btn" id="waBtn">
+      <span class="wa-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      </span>
+      <span class="wa-text">SEND MESSAGE</span>
+      <span class="wa-arrow">→</span>
+    </a>
+
+
+    <div class="wa-pulse-ring"></div>
+  </div>
+</section>
+
+<!-- SOCIALS -->
+<section class="socials-section" id="socials">
+  <div class="socials-bg-text">SOCIALS</div>
+  <div class="socials-header reveal">
+    <div>
+      <div class="section-label">Find Me Online</div>
+      <h2 class="section-title">MY <em>SOCIALS</em></h2>
+    </div>
+    <p style="max-width:320px;font-size:.85rem;line-height:1.8;color:rgba(245,242,238,.65);text-align:right">Follow the journey across platforms — behind-the-scenes, edits, music, code & more.</p>
+  </div>
+
+  <div class="socials-grid reveal">
+
+    <!-- Instagram -->
+    <a href="https://www.instagram.com/surya.pradhan_/" target="_blank" rel="noopener noreferrer" class="social-btn sb-instagram">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">Instagram</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- LinkedIn -->
+    <a href="https://www.linkedin.com/in/suryakanta-pradhan-b4179b27a/" target="_blank" rel="noopener noreferrer" class="social-btn sb-linkedin">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">LinkedIn</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- Project Drive -->
+    <a href="https://drive.google.com/drive/folders/1xaQf4mh_WHaPL5rWU0cE3SF1jF-rqdZw?usp=drive_link" target="_blank" rel="noopener noreferrer" class="social-btn sb-drive">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.433 22.396l2-3.465H22l-2 3.465H4.433zM2 18.931L8.567 7.604l3.464 2-6.567 11.327H2zm6.567-13.862L14.567 5.07h6.567l-6 10.392-2.001-3.466 4-6.927h-8.566z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">Project Drive</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- Threads -->
+    <a href="https://www.threads.com/@surya.pradhan_" target="_blank" rel="noopener noreferrer" class="social-btn sb-threads">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.822-2.047 1.634-1.573 1.823-3.519 1.803-4.064-.059-1.789-.484-3.053-1.34-3.963-.898-.95-2.19-1.574-3.847-1.85-.408 2.043-1.187 3.608-2.352 4.692-1.302 1.202-2.994 1.83-5.018 1.865-1.57.03-2.94-.317-3.97-1.008-1.137-.76-1.779-1.921-1.81-3.271-.023-1.06.322-1.986 1.001-2.682.771-.794 1.944-1.267 3.399-1.37.964-.069 1.924-.104 2.867-.104.414 0 .827.007 1.236.02-.037-.58-.109-1.108-.22-1.57-.31-1.3-.981-1.921-2.08-1.905-1.025.008-1.735.506-2.177 1.522l-1.941-.672c.667-1.738 2.004-2.701 3.946-2.718h.033c2.467 0 3.944 1.43 4.39 4.25.087.56.147 1.14.181 1.732.483.021.961.048 1.43.082 1.887.136 3.468.65 4.7 1.533 1.413 1.005 2.213 2.485 2.378 4.4.036.432.052.872.048 1.316-.04 2.063-.627 3.917-1.748 5.352C17.558 23.177 15.138 24 12.186 24zm-3.4-8.956c1.542-.026 2.715-.468 3.584-1.346.877-.887 1.412-2.16 1.65-3.882a33.5 33.5 0 00-1.138-.02c-.934 0-1.884.034-2.83.1-.97.069-1.707.352-2.19.838-.37.38-.545.856-.53 1.414.022.849.39 1.489 1.092 1.897.45.261.976.394 1.591.394l-.23-.395z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">Threads</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- X / Twitter -->
+    <a href="https://x.com/suryafx013" target="_blank" rel="noopener noreferrer" class="social-btn sb-x">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.25 2.25h6.893l4.263 5.634zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">X  (Twitter)</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- Discord -->
+    <a href="https://discord.gg/QjAPMeaKsD" target="_blank" rel="noopener noreferrer" class="social-btn sb-discord">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">Discord</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- SoundCloud -->
+    <a href="https://soundcloud.com/laxtline" target="_blank" rel="noopener noreferrer" class="social-btn sb-soundcloud">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1.175 12.225c-.015.067-.02.133-.02.201 0 .066.005.133.02.199l.59 3.367-.59 3.288c-.015.068-.02.135-.02.203 0 .465.38.844.843.844.348 0 .65-.207.792-.512l.7-3.823-.7-3.646a.862.862 0 00-.792-.512.844.844 0 00-.843.391zm3.154-1.607c-.02.077-.03.156-.03.236 0 .08.01.158.03.234l.836 4.944-.836 4.766c-.02.079-.03.157-.03.237 0 .556.453 1.009 1.009 1.009.416 0 .778-.254.938-.618l.95-5.394-.95-5.126a1.006 1.006 0 00-.938-.617 1.009 1.009 0 00-1.009.329zm3.35-1.003c-.03.085-.045.175-.045.267 0 .091.015.181.045.266l1.064 6.02-1.064 5.833c-.03.086-.045.176-.045.268 0 .644.523 1.167 1.167 1.167.485 0 .905-.294 1.093-.716l1.21-6.552-1.21-5.854a1.165 1.165 0 00-1.093-.716 1.167 1.167 0 00-1.122.017zM11.5 7.5a1.5 1.5 0 00-1.5 1.5v8a1.5 1.5 0 003 0v-8A1.5 1.5 0 0011.5 7.5zm3.25-2.5a1.75 1.75 0 00-1.75 1.75v9.5A1.75 1.75 0 0014.75 18a1.75 1.75 0 001.75-1.75V6.75A1.75 1.75 0 0014.75 5zm3.25 2.5a2 2 0 00-2 2v7a2 2 0 004 0v-7a2 2 0 00-2-2zm2.75 1a2.25 2.25 0 00-2.25 2.25v4.5a2.25 2.25 0 004.5 0v-4.5A2.25 2.25 0 0020.75 8.5z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">SoundCloud</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- YouTube -->
+    <a href="https://www.youtube.com/@suryaongaming0" target="_blank" rel="noopener noreferrer" class="social-btn sb-youtube">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">YouTube</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- GitHub -->
+    <a href="https://github.com/laxtline" target="_blank" rel="noopener noreferrer" class="social-btn sb-github">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">GitHub</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- LAXTLINE Drive -->
+    <a href="https://drive.google.com/drive/folders/1h-Jx9hQvzSXD0JQ1neP7tHOF_V2mpVMd?usp=sharing" target="_blank" rel="noopener noreferrer" class="social-btn sb-drive">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.433 22.396l2-3.465H22l-2 3.465H4.433zM2 18.931L8.567 7.604l3.464 2-6.567 11.327H2zm6.567-13.862L14.567 5.07h6.567l-6 10.392-2.001-3.466 4-6.927h-8.566z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">LAXTLINE Drive</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- Snapchat -->
+    <a href="https://snapchat.com/t/QZwBNrU5" target="_blank" rel="noopener noreferrer" class="social-btn sb-snapchat">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.334 4.566-.7.332-1.701.558-2.566.39-.896-.171-1.674-.794-2.572-1.087-.234-.078-.487-.117-.746-.117-.258 0-.511.039-.746.117-.897.293-1.676.916-2.572 1.087-.865.168-1.865-.058-2.566-.39-.069-1.347-.195-3.373.334-4.566C7.859 1.07 11.215.793 12.206.793zm-.206 21.415c-.606.28-1.308.44-2.043.44-.734 0-1.437-.16-2.043-.44-2.27-.054-7.164-.81-7.164-3.13 0-.36.075-.728.227-1.097a2.19 2.19 0 00-.124-.39 7.33 7.33 0 01-.46-2.473c0-1.5.474-2.677 1.258-3.456.788-.784 1.896-1.186 3.298-1.186h.06c.354-.001.72.034 1.086.098l.066.012c.286.049.498.072.669.072.17 0 .325-.022.434-.064a7.32 7.32 0 011.734-.197c.596 0 1.188.066 1.734.197.11.042.264.064.434.064.17 0 .383-.023.669-.072l.066-.012c.366-.064.732-.1 1.086-.098h.06c1.401 0 2.51.402 3.298 1.186.784.779 1.258 1.956 1.258 3.456a7.33 7.33 0 01-.46 2.473 2.19 2.19 0 00-.124.39c.152.37.227.737.227 1.097 0 2.32-4.894 3.076-7.164 3.13z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">Snapchat</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+    <!-- Blogger -->
+    <a href="https://www.blogger.com/blog/posts/2900529464585229451?hl=en" target="_blank" rel="noopener noreferrer" class="social-btn sb-blogger">
+      <span class="social-btn-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21.976 24H2.026C.9 24 0 23.1 0 21.976V2.026C0 .9.9 0 2.026 0h19.95C23.1 0 24 .9 24 2.026v19.95C24 23.1 23.1 24 21.976 24zM11.217 5.365H8.427c-1.688 0-3.059 1.37-3.059 3.059v7.151c0 1.689 1.37 3.059 3.059 3.059h7.151c1.688 0 3.059-1.37 3.059-3.059v-3.88c0-.401-.325-.726-.725-.726h-.724c-.62 0-1.124-.503-1.124-1.124v-.552c0-1.968-1.596-3.563-3.563-3.563h-.284zm-.186 2.496h.47c.608 0 1.1.492 1.1 1.1v.013c0 .607.492 1.1 1.1 1.1h.012c.606 0 1.098.493 1.098 1.1v.014a1.1 1.1 0 01-1.098 1.099H8.93a1.1 1.1 0 01-1.1-1.1V8.96c0-.607.493-1.1 1.1-1.1zm3.295 6.148a1.1 1.1 0 110 2.2H9.67a1.1 1.1 0 010-2.2z"/>
+        </svg>
+      </span>
+      <span class="social-btn-name">Blogger</span>
+      <span class="social-btn-arrow">→</span>
+      <span class="social-btn-pulse"></span>
+    </a>
+
+  </div>
+</section>
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">LAXT<span class="logo-accent">LINE</span></span>
+  <span class="footer-copy">© 2025 LAXTLINE Studio. All Rights Reserved.</span>
+  <div class="footer-links">
+    <a href="#work">Work</a>
+    <a href="#about">About</a>
+    <a href="#contact">Contact</a>
+    <a href="#socials">Socials</a>
+    <a href="#all-work">All Work</a>
+  </div>
+</footer>
+
+<script src="js/02-interactions.js"></script>
+<!-- ═══ ALL WORK SECTION ═══ -->
+<!-- Padding/typography live in css/gallery.css (.allwork-*) rather than inline
+     styles, so the responsive breakpoints can actually override them. -->
+<section id="all-work">
+  <div class="allwork-inner">
+    <div class="allwork-eyebrow">
+      <span style="display:block;width:24px;height:1px;background:var(--red)"></span>
+      <span style="font-family:var(--font-mono);font-size:.65rem;letter-spacing:3px;color:var(--red);text-transform:uppercase;">Complete Work</span>
+    </div>
+    <h2 class="allwork-title">ALL <em>PROJECTS</em></h2>
+
+  <!-- Populated dynamically by js/05-media-engine.js from CDN folder "laxtline_allprojects". -->
+  <div class="gallery-grid" id="galleryGrid" data-media-section="allprojects"></div>
+  <div class="media-empty" id="allprojectsEmpty" hidden>No projects yet.</div>
+
+  </div>
+</section>
+
+
+
+<script src="js/00-net-quality.js"></script>
+<script src="js/04-gallery-video.js"></script>
+<script src="js/05-media-engine.js"></script>
+<script src="js/06-admin.js"></script>
+</body>
+</html>

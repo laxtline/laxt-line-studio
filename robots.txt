@@ -1,0 +1,16 @@
+# ============================================================
+#  robots.txt — LAXTLINE Portfolio
+#  Tells search-engine crawlers what they may crawl, and where
+#  to find the sitemap.
+#
+#  This file must sit in the SITE ROOT (next to index.html) to
+#  have any effect — a copy anywhere else is ignored by crawlers.
+#  Live domain: https://laxt-line-studio.vercel.app
+# ============================================================
+
+# Allow every crawler to index the whole site
+User-agent: *
+Allow: /
+
+# Location of the XML sitemap (helps crawlers discover every URL)
+Sitemap: https://laxt-line-studio.vercel.app/sitemap.xml

@@ -1,0 +1,36 @@
+# ============================================================
+#  _headers — Netlify & Cloudflare Pages
+#  (Vercel reads vercel.json instead; GitHub Pages does not
+#   support custom headers at all and will simply ignore this.)
+#
+#  CACHING NOTE — read before raising any max-age:
+#  This site has no build step, so filenames are NOT content-hashed
+#  (css/main.css stays css/main.css after an edit). A long
+#  "immutable" cache would therefore pin visitors to a stale copy
+#  of the CSS/JS for the whole cache lifetime. Short max-age +
+#  revalidation is the correct trade-off here. If a bundler with
+#  hashed filenames is ever added, these can safely become
+#  "max-age=31536000, immutable".
+# ============================================================
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: geolocation=(), microphone=(), payment=(), usb=()
+
+# HTML: always revalidate so a redeploy is picked up immediately
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Stylesheets & scripts: short cache, then revalidate (cheap 304s)
+/css/*
+  Cache-Control: public, max-age=300, must-revalidate
+/js/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+# Static artwork: stable filenames, changes are rare
+/assets/*
+  Cache-Control: public, max-age=604800

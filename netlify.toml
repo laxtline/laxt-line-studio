@@ -1,0 +1,10 @@
+# ============================================================
+#  netlify.toml — Netlify deploy settings
+#  The site is plain static files with no build step, so the
+#  repository root is published as-is.
+#  Header rules live in _headers (shared with Cloudflare Pages).
+# ============================================================
+
+[build]
+  publish = "."
+  command = ""

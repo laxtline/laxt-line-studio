@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ============================================================
+   sitemap.xml — LAXTLINE Portfolio
+   Lists the site's URLs so search engines can crawl them.
+   This is a single-page site, so the homepage is the main URL;
+   the in-page sections are listed as anchor links for reference.
+
+   Primary domain: https://laxt-line-studio.vercel.app
+   (update <lastmod> whenever you change the site).
+  ============================================================
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Homepage (primary page) -->
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/</loc>
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Key in-page sections (anchors on the same single page) -->
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#work</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#all-work</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#about</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#services</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#software</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#contact</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://laxt-line-studio.vercel.app/#socials</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+</urlset>
